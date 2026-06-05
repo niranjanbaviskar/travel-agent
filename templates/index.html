@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoyageAI | Premium Flight Logistics</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .agent-content h3 { font-size: 1.25rem; font-weight: 800; color: #f8fafc; margin-bottom: 1rem; margin-top: 0.5rem; border-bottom: 1px solid #334155; padding-bottom: 0.5rem; }
+        .agent-content ul { margin-bottom: 1rem; }
+        .agent-content li { margin-bottom: 0.75rem; line-height: 1.6; color: #cbd5e1; list-style-type: disc; margin-left: 1.25rem; }
+        .agent-content strong { color: #f1f5f9; font-weight: 700; }
+        
+        /* Premium Custom Calendar Theme Settings */
+        ::-webkit-calendar-picker-indicator {
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%236366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>');
+            cursor: pointer;
+            padding: 2px;
+        }
+        .suggestions-box {
+            max-height: 220px;
+            overflow-y: auto;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body class="bg-[#0f172a] text-slate-100 min-h-screen selection:bg-indigo-500/30">
+
+    <div class="max-w-7xl mx-auto p-4 sm:p-8">
+        
+        <header class="flex flex-col items-center justify-center text-center mt-12 mb-20">
+            <div class="flex items-center gap-3 px-4 py-2 bg-indigo-500/10 rounded-full border border-indigo-500/20 mb-6">
+                <span class="w-2 h-2 rounded-full bg-indigo-400"></span>
+                <span class="text-xs font-bold uppercase tracking-widest text-indigo-400">SerpApi Engine Active</span>
+            </div>
+            <h1 class="text-6xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent mb-6">VoyageAI</h1>
+            <p class="text-slate-400 font-medium max-w-md text-base leading-relaxed">Autonomous flight valuation system powered by LangChain and Llama-3.3.</p>
+        </header>
+
+        <div class="bg-slate-900/60 backdrop-blur-xl border border-slate-800 p-6 sm:p-8 rounded-3xl shadow-2xl mb-12 relative z-50">
+            <form id="searchForm" class="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
+                
+                <div class="relative">
+                    <label class="block text-xs font-bold text-indigo-400 uppercase tracking-widest mb-3">Origin Airport (IATA)</label>
+                    <input type="text" id="originInput" placeholder="Type city or code (e.g., Delhi)" autocomplete="off" class="w-full bg-slate-950/80 border border-slate-800 text-white rounded-xl px-4 py-3.5 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-medium transition" required>
+                    <input type="hidden" id="originCode">
+                    <div id="originSuggestions" class="hidden absolute left-0 right-0 mt-2 bg-slate-950 border border-slate-800 rounded-xl shadow-2xl suggestions-box"></div>
+                </div>
+
+                <div class="relative">
+                    <label class="block text-xs font-bold text-indigo-400 uppercase tracking-widest mb-3">Destination Airport (IATA)</label>
+                    <input type="text" id="destinationInput" placeholder="Type city or code (e.g., Mumbai)" autocomplete="off" class="w-full bg-slate-950/80 border border-slate-800 text-white rounded-xl px-4 py-3.5 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-medium transition" required>
+                    <input type="hidden" id="destinationCode">
+                    <div id="destinationSuggestions" class="hidden absolute left-0 right-0 mt-2 bg-slate-950 border border-slate-800 rounded-xl shadow-2xl suggestions-box"></div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-indigo-400 uppercase tracking-widest mb-3">Departure Target Date</label>
+                    <input type="date" id="date" class="w-full bg-slate-950/80 border border-slate-800 text-white rounded-xl px-4 py-3.5 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-bold tracking-wide transition cursor-pointer" required>
+                </div>
+
+                <div>
+                    <button type="submit" id="searchBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold h-[54px] rounded-xl transition shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-3">
+                        <span id="btnText">Execute Analytics Loop</span>
+                        <svg id="loadingSpinner" class="hidden animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div id="resultsArea" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-8 items-start relative z-10">
+            
+            <div class="lg:col-span-2 space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+                    <h2 class="text-xl font-bold tracking-tight text-white">Live Inventory Offers</h2>
+                    <span class="text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full uppercase tracking-wider">Target Date Selection</span>
+                </div>
+                <div id="flightsContainer" class="space-y-4"></div>
+            </div>
+
+            <div class="lg:col-span-1 sticky top-8">
+                <div class="bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
+                    
+                    <div class="flex items-center gap-3.5 mb-6 pb-4 border-b border-slate-800/60">
+                        <div class="w-10 h-10 bg-indigo-500/10 border border-indigo-500/30 rounded-xl flex items-center justify-center">
+                            <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        </div>
+                        <div>
+                            <h2 class="text-base font-bold text-white">Agentic Valuation</h2>
+                            <p class="text-xs text-slate-500 font-semibold uppercase tracking-wider">Orchestrated via LangChain</p>
+                        </div>
+                    </div>
+                    
+                    <div id="aiContent" class="agent-content text-sm text-slate-300"></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Universal Native Dictionary Matrix for Smart Autocomplete Matches
+        const airportDatabase = [
+            { code: "DEL", city: "Delhi", name: "Indira Gandhi International Airport" },
+            { code: "BOM", city: "Mumbai", name: "Chhatrapati Shivaji Maharaj Airport" },
+            { code: "BLR", city: "Bengaluru", name: "Kempegowda International Airport" },
+            { code: "MAA", city: "Chennai", name: "Chennai International Airport" },
+            { code: "CCU", city: "Kolkata", name: "Netaji Subhash Chandra Bose Airport" },
+            { code: "HYD", city: "Hyderabad", name: "Rajiv Gandhi International Airport" },
+            { code: "PNQ", city: "Pune", name: "Pune Airport" },
+            { code: "AMD", city: "Ahmedabad", name: "Sardar Vallabhbhai Patel Airport" },
+            { code: "COK", city: "Kochi", name: "Cochin International Airport" },
+            { code: "GOI", city: "Goa", name: "Dabolim Airport" },
+            { code: "DXB", city: "Dubai", name: "Dubai International Airport" },
+            { code: "LHR", city: "London", name: "Heathrow Airport" },
+            { code: "JFK", city: "New York", name: "John F. Kennedy Airport" },
+            { code: "SIN", city: "Singapore", name: "Changi Airport" }
+        ];
+
+        // Setup Dropdown Core Logic 
+        function wireAutocomplete(inputId, hiddenId, suggestionsId) {
+            const input = document.getElementById(inputId);
+            const hidden = document.getElementById(hiddenId);
+            const box = document.getElementById(suggestionsId);
+
+            input.addEventListener('input', () => {
+                const query = input.value.trim().toLowerCase();
+                box.innerHTML = '';
+                
+                if (!query) {
+                    box.classList.add('hidden');
+                    return;
+                }
+
+                const filtered = airportDatabase.filter(item => 
+                    item.city.toLowerCase().includes(query) || 
+                    item.code.toLowerCase().includes(query) ||
+                    item.name.toLowerCase().includes(query)
+                );
+
+                if (filtered.length === 0) {
+                    box.classList.add('hidden');
+                    return;
+                }
+
+                box.classList.remove('hidden');
+                filtered.forEach(item => {
+                    const row = document.createElement('div');
+                    row.className = "px-4 py-3 hover:bg-indigo-600/20 cursor-pointer transition border-b border-slate-900/50 flex justify-between items-center text-sm text-slate-200";
+                    row.innerHTML = `<div><span class="font-bold text-white">${item.city}</span> <span class="text-xs text-slate-500 ml-1">(${item.name})</span></div><div class="font-mono font-bold bg-slate-800 text-indigo-400 px-2 py-0.5 rounded text-xs">${item.code}</div>`;
+                    
+                    row.addEventListener('click', () => {
+                        input.value = `${item.city} (${item.code})`;
+                        hidden.value = item.code;
+                        box.classList.add('hidden');
+                    });
+                    box.appendChild(row);
+                });
+            });
+
+            // Close logic on outer page click action loops
+            document.addEventListener('click', (e) => {
+                if (e.target !== input) box.classList.add('hidden');
+            });
+        }
+
+        wireAutocomplete('originInput', 'originCode', 'originSuggestions');
+        wireAutocomplete('destinationInput', 'destinationCode', 'destinationSuggestions');
+
+        // Light-speed client-side Markdown formatter
+        function parseAgentMarkdown(text) {
+            let html = text;
+            html = html.replace(/### (.*?)(?=<br>|$)/g, '<h3>$1</h3>');
+            html = html.replace(/\* \*\*(.*?)\*\*(.*?)(?=<br>|$)/g, '<li><strong>$1</strong>$2</li>');
+            if (html.includes('<li>') && !html.includes('<ul>')) {
+                html = html.replace(/(<li>.*<\/li>)/s, '<ul class="space-y-2">$1</ul>');
+            }
+            return html;
+        }
+
+        document.getElementById('searchForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Extract code cleanly or fallback to parsed text inputs
+            const origin = document.getElementById('originCode').value || document.getElementById('originInput').value.substring(0,3).toUpperCase();
+            const destination = document.getElementById('destinationCode').value || document.getElementById('destinationInput').value.substring(0,3).toUpperCase();
+            const date = document.getElementById('date').value;
+            
+            const btnText = document.getElementById('btnText');
+            const spinner = document.getElementById('loadingSpinner');
+            const resultsArea = document.getElementById('resultsArea');
+            const flightsContainer = document.getElementById('flightsContainer');
+            const aiContent = document.getElementById('aiContent');
+
+            btnText.textContent = "Processing Multi-Day Agent Deltas...";
+            spinner.classList.remove('hidden');
+            resultsArea.classList.add('hidden');
+
+            try {
+                const response = await fetch('/api/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ origin, destination, date })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    if (!data.flights || data.flights.length === 0) {
+                        flightsContainer.innerHTML = `<div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl text-slate-400 text-center font-medium">No direct flight objects returned from the Google Flights engine.</div>`;
+                    } else {
+                        // Map items out alongside real Deep-linking URLs directly to booking systems
+                        flightsContainer.innerHTML = data.flights.map((flight, idx) => {
+                            // Deep linking structural formulas
+                            const googleFlightsUrl = `https://www.google.com/travel/flights?q=Flights%20to%20${destination}%20from%20${origin}%20on%20${date}%20oneway`;
+                            const mmtUrl = `https://www.makemytrip.com/flight/search?itinerary=${origin}-${destination}-${date.split('-').reverse().join('/')}&tripType=O&paxType=A-1_C-0_I-0&intl=false&cabinClass=E`;
+                            const easeMyTripUrl = `https://flights.easemytrip.com/FlightList/Index?srch=${origin}|${destination}|${date.split('-').reverse().join('/')}|0|0|A|E|Direct|`;
+
+                            return `
+                                <div class="bg-slate-900/40 border ${idx === 0 ? 'border-emerald-500/40 ring-1 ring-emerald-500/20' : 'border-slate-800'} p-6 rounded-2xl shadow-sm flex flex-col justify-between gap-5 transition hover:bg-slate-900/80">
+                                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                        <div class="flex items-center gap-4">
+                                            <div class="w-12 h-12 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-center text-indigo-400 font-black text-sm tracking-wide">
+                                                ${flight.airline.substring(0,3).toUpperCase()}
+                                            </div>
+                                            <div>
+                                                <h3 class="font-bold text-base text-white">${flight.airline}</h3>
+                                                <p class="text-slate-500 text-xs font-semibold mt-0.5">Scheduled Departure: ${flight.departure.replace('T', ' ')}</p>
+                                            </div>
+                                        </div>
+                                        <div class="text-right sm:text-right w-full sm:w-auto flex sm:flex-col justify-between items-center sm:items-end border-t sm:border-t-0 border-slate-800/50 pt-3 sm:pt-0">
+                                            <p class="text-2xl font-black text-white tracking-tight">₹${flight.price.toLocaleString('en-IN')}</p>
+                                            <span class="text-[10px] uppercase tracking-widest text-slate-500 font-bold mt-0.5">One Way</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 border-t border-slate-800/60 pt-4">
+                                        <a href="${googleFlightsUrl}" target="_blank" class="bg-slate-950 hover:bg-slate-800 text-slate-200 border border-slate-800 font-bold text-xs py-3 px-4 rounded-xl text-center transition flex items-center justify-center gap-1.5">
+                                            Google Flights ↗
+                                        </a>
+                                        <a href="${mmtUrl}" target="_blank" class="bg-indigo-600/10 text-indigo-400 hover:bg-indigo-600/20 border border-indigo-500/20 font-bold text-xs py-3 px-4 rounded-xl text-center transition flex items-center justify-center gap-1.5">
+                                            MakeMyTrip ↗
+                                        </a>
+                                        <a href="${easeMyTripUrl}" target="_blank" class="bg-emerald-600/10 text-emerald-400 hover:bg-emerald-600/20 border border-emerald-500/20 font-bold text-xs py-3 px-4 rounded-xl text-center transition flex items-center justify-center gap-1.5">
+                                            EaseMyTrip ↗
+                                        </a>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+                    }
+
+                    let operationalHtml = data.ai_suggestion.replace(/\n/g, '<br>');
+                    aiContent.innerHTML = parseAgentMarkdown(operationalHtml);
+                    resultsArea.classList.remove('hidden');
+                } else {
+                    alert("Execution Error: " + (data.error || "Failed API transaction."));
+                }
+            } catch (error) {
+                console.error("Critical Exception:", error);
+                alert("Runtime error tracking connectivity interfaces.");
+            } finally {
+                btnText.textContent = "Execute Analytics Loop";
+                spinner.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
